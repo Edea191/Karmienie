@@ -1,0 +1,1196 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Dziennik karmienia</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Karmienie">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍼</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.js"></script>
+<style>
+:root{
+  --bg:#F3F5F9; --surface:#FFFFFF; --ink:#1F2A37; --muted:#667085; --line:#DDE2EA;
+  --formula:#3E7CB1; --formula-soft:#D6E5F2;
+  --breast:#E2A532; --breast-soft:#F8E9C8;
+  --nurse:#8A6FC4; --nurse-soft:#E7E0F5;
+  --alert:#C9476A; --alert-soft:#F7DCE4; --ok:#2F8F6B; --ok-soft:#D7EFE5;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#121821; --surface:#1B2330; --ink:#E7ECF3; --muted:#98A3B3; --line:#2C3746;
+    --formula:#6FA6D6; --formula-soft:#22354A;
+    --breast:#EDB94F; --breast-soft:#3D3220;
+    --nurse:#A992E0; --nurse-soft:#2E2742;
+    --alert:#E9789A; --alert-soft:#3F2430; --ok:#5CC39A; --ok-soft:#1D3A30;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#121821; --surface:#1B2330; --ink:#E7ECF3; --muted:#98A3B3; --line:#2C3746;
+  --formula:#6FA6D6; --formula-soft:#22354A;
+  --breast:#EDB94F; --breast-soft:#3D3220;
+  --nurse:#A992E0; --nurse-soft:#2E2742;
+  --alert:#E9789A; --alert-soft:#3F2430; --ok:#5CC39A; --ok-soft:#1D3A30;
+  color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:Nunito,"Segoe UI",system-ui,-apple-system,sans-serif;font-size:16px;line-height:1.45;-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit}
+.wrap{max-width:560px;margin:0 auto;padding:16px 16px 110px}
+.num{font-variant-numeric:tabular-nums}
+
+.since{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 10px;padding:14px 18px;border-radius:18px;background:var(--surface);border:1px solid var(--line);margin-bottom:18px}
+.since b{font-size:1.6rem;font-weight:900;letter-spacing:-.01em}
+.since span{color:var(--muted);font-size:.95rem}
+
+h1{font-size:1.35rem;font-weight:900;margin:4px 0 14px;letter-spacing:-.01em}
+h2{font-size:1.05rem;font-weight:800;margin:22px 0 10px}
+
+.bottles{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.bcol{background:var(--surface);border:1px solid var(--line);border-radius:22px;padding:16px 10px 14px;display:flex;flex-direction:column;align-items:center;gap:10px}
+.bname{font-weight:800;font-size:.98rem;display:flex;align-items:center;gap:7px}
+.dot{width:11px;height:11px;border-radius:50%;display:inline-block;flex:none}
+.bottle-wrap{position:relative;padding-top:20px}
+.bottle-wrap::before{content:"";position:absolute;top:0;left:50%;transform:translateX(-50%);width:26px;height:22px;border-radius:12px 12px 4px 4px;background:var(--line)}
+.bottle{position:relative;width:92px;height:230px;border-radius:26px 26px 20px 20px;border:3px solid var(--line);background:var(--bg);overflow:hidden;touch-action:none;cursor:ns-resize;outline:none}
+.bottle:focus-visible{box-shadow:0 0 0 3px var(--surface),0 0 0 6px var(--ink)}
+.fill{position:absolute;left:0;right:0;bottom:0;height:0;transition:height .12s ease-out}
+.ticks{position:absolute;inset:0;pointer-events:none}
+.ticks i{position:absolute;right:0;height:2px;background:var(--ink);opacity:.18;width:18px}
+.ticks i.major{width:30px;opacity:.28}
+.ticks em{position:absolute;right:34px;font-style:normal;font-size:.68rem;color:var(--muted);font-weight:700}
+.bval{font-size:2rem;font-weight:900;line-height:1}
+.bval small{font-size:.9rem;font-weight:700;color:var(--muted);margin-left:2px}
+.steppers{display:flex;gap:8px;align-items:center}
+.steppers button{width:46px;height:40px;border-radius:12px;border:1px solid var(--line);background:var(--bg);font-size:1.3rem;font-weight:800;cursor:pointer}
+.steppers button:active{transform:scale(.96)}
+
+.summary{margin-top:16px;background:var(--surface);border:1px solid var(--line);border-radius:22px;padding:16px}
+.stack{display:flex;height:22px;border-radius:11px;overflow:hidden;background:var(--bg);border:1px solid var(--line)}
+.stack .s-b{background:var(--breast);transition:width .15s}
+.stack .s-f{background:var(--formula);transition:width .15s}
+.stack.thin{height:10px;border-radius:6px}
+.legend{display:flex;flex-wrap:wrap;gap:4px 14px;margin-top:10px;font-weight:700}
+.legend .tot{margin-left:auto;font-weight:900}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+
+.when{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin-top:14px;color:var(--muted);font-weight:600}
+.when input{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:6px 10px}
+.primary{display:block;width:100%;margin-top:16px;padding:15px;border:0;border-radius:16px;background:var(--ink);color:var(--surface);font-weight:900;font-size:1.05rem;cursor:pointer}
+.primary:disabled{opacity:.35;cursor:not-allowed}
+.primary.nurse{background:var(--nurse);color:#fff}
+.ghost{background:none;border:1px solid var(--line);border-radius:12px;padding:8px 14px;font-weight:700;cursor:pointer}
+
+/* Nursing card */
+.nursecard{margin-top:16px;background:var(--surface);border:1px solid var(--line);border-left:6px solid var(--nurse);border-radius:22px;padding:16px}
+.nrow{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:12px;flex-wrap:wrap}
+.nrow > span{color:var(--muted);font-weight:600}
+.nmin{min-width:84px;text-align:center;font-weight:900;font-size:1.25rem}
+
+/* Day */
+.daynav{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px}
+.daynav button{width:42px;height:42px;border-radius:12px;border:1px solid var(--line);background:var(--surface);font-size:1.2rem;font-weight:800;cursor:pointer}
+.daynav button:disabled{opacity:.3}
+.daynav .dlabel{font-weight:900;font-size:1.1rem;text-align:center}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:16px}
+.tiles{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px}
+.tile{border-radius:16px;padding:12px 10px}
+.tile span{display:block;font-size:.82rem;font-weight:800}
+.tile b{display:block;font-size:1.65rem;font-weight:900;line-height:1.1;margin-top:4px}
+.tile b small{font-size:.85rem;font-weight:800;margin-left:2px}
+.tile em{display:block;font-style:normal;font-size:.8rem;font-weight:700;opacity:.85;margin-top:2px}
+.tile.b{background:var(--breast-soft)} .tile.b span{color:var(--breast)}
+.tile.f{background:var(--formula-soft)} .tile.f span{color:var(--formula)}
+.tile.n{background:var(--nurse-soft)} .tile.n span{color:var(--nurse)}
+.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px}
+.kpi b{display:block;font-size:1.15rem;font-weight:900}
+.kpi span{font-size:.82rem;color:var(--muted);font-weight:600}
+
+.feed-list{list-style:none;margin:0;padding:0}
+.gap{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:.85rem;font-weight:700;padding:6px 0 6px 22px;position:relative}
+.gap::before{content:"";position:absolute;left:8px;top:0;bottom:0;border-left:2px dashed var(--line)}
+.entry{display:block;width:100%;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:12px 14px;cursor:pointer}
+.entry.n{border-left:6px solid var(--nurse)}
+.entry:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+.erow{display:flex;align-items:baseline;gap:10px;margin-bottom:8px}
+.etime{font-weight:900;font-size:1.15rem}
+.eml{color:var(--muted);font-weight:700;font-size:.92rem}
+.etot{margin-left:auto;font-weight:900}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px}
+.chip{font-size:.8rem;font-weight:800;padding:3px 9px;border-radius:999px;background:var(--alert-soft);color:var(--alert)}
+.chip.ok{background:var(--ok-soft);color:var(--ok)}
+.chip.none{background:var(--bg);color:var(--muted);border:1px dashed var(--line)}
+.empty{color:var(--muted);text-align:center;padding:28px 10px;font-weight:600}
+
+/* Analysis */
+.bucket{padding:14px 0;border-top:1px solid var(--line)}
+.bucket:first-child{border-top:0;padding-top:4px}
+.bhead{display:flex;align-items:baseline;gap:8px;margin-bottom:8px}
+.bhead b{font-weight:900}
+.bhead span.cnt{color:var(--muted);font-size:.85rem;font-weight:700;margin-left:auto}
+.mix{display:flex;height:8px;width:72px;border-radius:4px;overflow:hidden;flex:none;align-self:center}
+.mix i{display:block;height:100%}
+.rate{display:flex;align-items:center;gap:10px}
+.rate .track{flex:1;height:12px;border-radius:6px;background:var(--bg);border:1px solid var(--line);overflow:hidden}
+.rate .track i{display:block;height:100%;background:var(--alert)}
+.rate b{min-width:52px;text-align:right;font-weight:900}
+.note{color:var(--muted);font-size:.9rem;margin-top:12px}
+
+.tabs{position:fixed;left:0;right:0;bottom:0;padding-bottom:env(safe-area-inset-bottom,0px);background:var(--surface);border-top:1px solid var(--line);display:flex;justify-content:center;z-index:5}
+.tabs div{display:flex;max-width:560px;width:100%}
+.tabs button{flex:1;border:0;background:none;padding:12px 2px 13px;font-weight:800;font-size:.84rem;color:var(--muted);cursor:pointer;position:relative}
+.tabs button[aria-selected="true"]{color:var(--ink)}
+.tabs button[aria-selected="true"]::after{content:"";position:absolute;top:0;left:28%;right:28%;height:3px;border-radius:0 0 3px 3px;background:var(--ink)}
+.view[hidden]{display:none}
+
+dialog{border:0;border-radius:24px;padding:0;width:min(520px,calc(100vw - 24px));background:var(--surface);color:var(--ink);max-height:calc(100vh - 40px)}
+dialog::backdrop{background:rgba(10,15,25,.45)}
+.dlg{padding:20px}
+.dlg h3{margin:0 0 4px;font-size:1.15rem;font-weight:900}
+.dlg .sub{color:var(--muted);font-weight:600;margin-bottom:14px}
+.sym{display:flex;flex-wrap:wrap;gap:8px}
+.sym button{border:1.5px solid var(--line);background:var(--bg);border-radius:999px;padding:7px 13px;font-weight:700;font-size:.92rem;cursor:pointer}
+.sym button[aria-pressed="true"]{background:var(--alert-soft);border-color:var(--alert);color:var(--alert)}
+.sym button.calm[aria-pressed="true"]{background:var(--ok-soft);border-color:var(--ok);color:var(--ok)}
+.sym button.add{border-style:dashed;color:var(--muted);width:40px;padding:7px 0;font-size:1.1rem;font-weight:900}
+.seg{display:flex;gap:6px;margin-top:6px}
+.seg button{flex:1;border:1.5px solid var(--line);background:var(--bg);border-radius:12px;padding:8px 4px;font-weight:800;cursor:pointer}
+.seg button[aria-pressed="true"]{border-color:var(--ink);background:var(--ink);color:var(--surface)}
+.lbl{font-weight:800;margin:16px 0 6px;display:block}
+textarea{width:100%;min-height:70px;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:10px}
+.dlg-actions{display:flex;gap:10px;margin-top:18px;align-items:center}
+.dlg-actions .primary{margin:0;flex:1}
+.danger{background:none;border:0;color:var(--alert);font-weight:800;cursor:pointer;padding:10px 4px}
+.danger.confirm{background:var(--alert);color:#fff;border-radius:12px;padding:10px 12px}
+.drops{margin-top:16px;background:var(--surface);border:1px solid var(--line);border-radius:22px;padding:14px 16px}
+.drops .row{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.drops label{flex:1;min-width:110px;display:flex;align-items:center;gap:8px;padding:10px 12px;border:1.5px solid var(--line);border-radius:14px;background:var(--bg);font-weight:800;cursor:pointer}
+.drops label:has(input:checked){border-color:var(--ok);background:var(--ok-soft);color:var(--ok)}
+.drops input{width:20px;height:20px;accent-color:var(--ok);margin:0;flex:none}
+.chip.drop{background:var(--bg);color:var(--ink);border:1px solid var(--line)}
+.addrow{display:flex;gap:8px;margin-top:10px}
+.addrow[hidden]{display:none}
+.txt{width:100%;font:inherit;font-size:.9rem;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-top:10px}
+.addrow input{flex:1;min-width:0;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:8px 12px}
+
+.toast{position:fixed;left:50%;bottom:calc(76px + env(safe-area-inset-bottom,0px));transform:translateX(-50%) translateY(20px);opacity:0;pointer-events:none;background:var(--ink);color:var(--surface);padding:10px 12px 10px 16px;border-radius:14px;font-weight:700;display:flex;gap:12px;align-items:center;transition:.2s;z-index:10;width:max-content;max-width:calc(100vw - 24px)}
+.toast.show{opacity:1;transform:translateX(-50%);pointer-events:auto}
+.toast button{background:var(--surface);color:var(--ink);border:0;border-radius:10px;padding:6px 10px;font-weight:800;cursor:pointer}
+.sync{font-size:.78rem;color:var(--muted);text-align:center;margin-top:22px}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+
+/* Header */
+.top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 14px}
+.kid{display:flex;align-items:center;gap:10px;font-weight:900;font-size:1.2rem;min-width:0}
+.kid i{font-style:normal;width:38px;height:38px;border-radius:50%;display:grid;place-items:center;background:var(--nurse-soft);font-size:1.2rem;flex:none}
+.kid b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* Auth */
+.auth{position:fixed;inset:0;z-index:20;background:var(--bg);overflow:auto;padding:calc(24px + env(safe-area-inset-top,0px)) 16px calc(24px + env(safe-area-inset-bottom,0px))}
+.auth[hidden]{display:none}
+.auth-box{max-width:400px;margin:6vh auto 0;background:var(--surface);border:1px solid var(--line);border-radius:24px;padding:24px 20px}
+.auth-box .logo{font-size:2.4rem;text-align:center}
+.auth-box h1{text-align:center;margin:6px 0 18px}
+.fld{display:block;font-weight:800;margin-top:14px}
+.fld[hidden]{display:none}
+.fld input{display:block;width:100%;margin-top:6px;font:inherit;font-weight:600;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:11px 12px}
+.link{display:block;margin:14px auto 0;background:none;border:0;color:var(--muted);font-weight:800;text-decoration:underline;cursor:pointer}
+.link[hidden]{display:none}
+.amsg{min-height:1.4em;margin:14px 0 0;text-align:center;font-weight:700}
+.amsg.err{color:var(--alert)} .amsg.ok{color:var(--ok)}
+#app[hidden]{display:none}
+/* Settings */
+.plist{list-style:none;margin:0;padding:0}
+.plist li{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 0;border-top:1px solid var(--line);font-weight:700}
+.plist li:first-child{border-top:0;padding-top:0}
+.plist li.muted{color:var(--muted);font-weight:600}
+.plist button{width:36px;height:36px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--alert);font-weight:900;cursor:pointer;flex:none}
+.card .addrow input{padding:10px 12px}
+</style>
+</head>
+<body>
+
+<!-- LOGOWANIE -->
+<section class="auth" id="auth" hidden>
+  <div class="auth-box">
+    <div class="logo">🍼</div>
+    <h1>Dziennik karmienia</h1>
+    <div class="seg" id="authSeg">
+      <button type="button" data-m="login" aria-pressed="true">Logowanie</button>
+      <button type="button" data-m="signup" aria-pressed="false">Nowe konto</button>
+    </div>
+    <form id="authForm" novalidate>
+      <label class="fld" id="fEmail">E-mail<input type="email" id="aEmail" autocomplete="username" inputmode="email"></label>
+      <label class="fld" id="fPass"><span id="passLbl">Hasło</span><input type="password" id="aPass" autocomplete="current-password"></label>
+      <label class="fld" id="fChild" hidden>Imię dziecka<input id="aChild" maxlength="40" autocomplete="off"></label>
+      <div class="fld" id="fQ" hidden>Pytanie pomocnicze
+        <div class="seg" id="aQ">
+          <button type="button" data-q="child_birthdate" aria-pressed="true">Data urodzenia dziecka</button>
+          <button type="button" data-q="pet_name" aria-pressed="false">Imię zwierzaka</button>
+        </div>
+      </div>
+      <label class="fld" id="fAns" hidden><span id="ansLbl">Odpowiedź</span><input id="aAns" type="date" autocomplete="off"></label>
+      <button class="primary" id="aSubmit" type="submit">Zaloguj</button>
+    </form>
+    <p class="note" id="aHint" hidden style="text-align:center"></p>
+    <button class="link" id="aForgot" type="button">Nie pamiętam hasła</button>
+    <button class="link" id="aBack" type="button" hidden>Wróć do logowania</button>
+    <p class="amsg" id="aMsg" role="status"></p>
+  </div>
+</section>
+
+<div id="app" hidden>
+<div class="wrap">
+  <header class="top"><div class="kid"><i aria-hidden="true">👶</i><b id="kidName"></b></div></header>
+
+  <!-- KARMIENIE -->
+  <section class="view" id="v-feed">
+    <div class="since"><b class="num" id="sinceVal">—</b><span id="sinceLbl">brak zapisanych karmień</span></div>
+    <h1>Karmienie butelką</h1>
+    <div class="bottles">
+      <div class="bcol">
+        <div class="bname"><i class="dot" style="background:var(--formula)"></i>Modyfikowane</div>
+        <div class="bottle-wrap"><div class="bottle" id="b-formula" role="slider" tabindex="0" aria-label="Mleko modyfikowane w ml" aria-valuemin="0" aria-valuenow="0"><div class="fill" style="background:var(--formula)"></div><div class="ticks"></div></div></div>
+        <div class="bval num" id="val-formula">0<small>ml</small></div>
+        <div class="steppers"><button data-k="formula" data-d="-10" aria-label="Mniej modyfikowanego">−</button><button data-k="formula" data-d="10" aria-label="Więcej modyfikowanego">+</button></div>
+      </div>
+      <div class="bcol">
+        <div class="bname"><i class="dot" style="background:var(--breast)"></i>Odciągane</div>
+        <div class="bottle-wrap"><div class="bottle" id="b-breast" role="slider" tabindex="0" aria-label="Mleko odciągane w ml" aria-valuemin="0" aria-valuenow="0"><div class="fill" style="background:var(--breast)"></div><div class="ticks"></div></div></div>
+        <div class="bval num" id="val-breast">0<small>ml</small></div>
+        <div class="steppers"><button data-k="breast" data-d="-10" aria-label="Mniej odciąganego">−</button><button data-k="breast" data-d="10" aria-label="Więcej odciąganego">+</button></div>
+      </div>
+    </div>
+
+    <div class="drops" id="dropsCard">
+      <div class="bname">Krople podane przy karmieniu</div>
+      <div class="row" id="dropsRow"></div>
+    </div>
+
+    <div class="summary">
+      <div class="stack" id="stackNow"><div class="s-b"></div><div class="s-f"></div></div>
+      <div class="legend num" id="legendNow"></div>
+      <label class="when">Godzina karmienia <input type="datetime-local" id="when"></label>
+      <button class="primary" id="saveBtn" disabled>Zapisz karmienie butelką</button>
+    </div>
+
+    <div class="nursecard">
+      <div class="bname"><i class="dot" style="background:var(--nurse)"></i>Karmienie piersią</div>
+      <div class="nrow"><span>Czas trwania</span>
+        <div class="steppers"><button id="nMinus" aria-label="Krócej">−</button><span class="nmin num" id="nMin">—</span><button id="nPlus" aria-label="Dłużej">+</button></div>
+      </div>
+      <div class="seg" id="sideSeg" style="margin-top:12px">
+        <button data-s="lewa" aria-pressed="false">Lewa</button>
+        <button data-s="prawa" aria-pressed="false">Prawa</button>
+        <button data-s="obie" aria-pressed="false">Obie</button>
+      </div>
+      <label class="when">Godzina karmienia <input type="datetime-local" id="nWhen"></label>
+      <button class="primary nurse" id="nSave">Zapisz karmienie piersią</button>
+    </div>
+  </section>
+
+  <!-- DZIEŃ -->
+  <section class="view" id="v-day" hidden>
+    <div class="daynav">
+      <button id="prevDay" aria-label="Poprzedni dzień">‹</button>
+      <div class="dlabel" id="dayLabel"></div>
+      <button id="nextDay" aria-label="Następny dzień">›</button>
+    </div>
+    <div class="card">
+      <div class="tiles num" id="tiles"></div>
+      <div class="stack" id="stackDay"><div class="s-b"></div><div class="s-f"></div></div>
+      <div class="legend num" id="legendDay"></div>
+      <div class="kpis num" id="kpis"></div>
+    </div>
+    <h2>Karmienia i objawy</h2>
+    <ul class="feed-list" id="feedList"></ul>
+  </section>
+
+  <!-- ANALIZA -->
+  <section class="view" id="v-stats" hidden>
+    <h1>Co wpływa na objawy</h1>
+    <div class="seg" id="dimSeg" style="margin-bottom:8px">
+      <button data-d="mix" aria-pressed="true">Proporcje</button>
+      <button data-d="size" aria-pressed="false">Porcja</button>
+      <button data-d="time" aria-pressed="false">Pora dnia</button>
+      <button data-d="drops" aria-pressed="false">Krople</button>
+    </div>
+    <div class="seg" id="rangeSeg" style="margin-bottom:14px">
+      <button data-r="7" aria-pressed="false">7 dni</button>
+      <button data-r="30" aria-pressed="true">30 dni</button>
+      <button data-r="0" aria-pressed="false">Wszystko</button>
+    </div>
+    <div class="card" id="buckets"></div>
+    <h2>Najczęstsze objawy w grupach</h2>
+    <div class="card" id="symTable"></div>
+    <p class="note">Liczone są tylko karmienia, przy których zapisano objawy lub „Bez objawów”. Karmienia bez oceny nie wpływają na wynik.</p>
+  </section>
+
+  <!-- USTAWIENIA -->
+  <section class="view" id="v-set" hidden>
+    <h1>Ustawienia</h1>
+    <div class="card">
+      <span class="lbl" style="margin-top:0">Imię dziecka</span>
+      <div class="addrow"><input id="sChild" maxlength="40" aria-label="Imię dziecka"><button class="ghost" id="sChildSave">Zapisz</button></div>
+    </div>
+
+    <h2>Maksymalna ilość na butelkę</h2>
+    <div class="card">
+      <div class="nrow" style="margin-top:0"><span>Zakres suwaka (co 10 ml)</span>
+        <div class="steppers"><button id="mxMinus" aria-label="Zmniejsz zakres">−</button><span class="nmin num" id="mxVal"></span><button id="mxPlus" aria-label="Zwiększ zakres">+</button></div>
+      </div>
+    </div>
+
+    <h2>Krople (maks. 3)</h2>
+    <div class="card">
+      <ul class="plist" id="dropList"></ul>
+      <div class="addrow" id="dropAdd"><input id="dropIn" maxlength="30" placeholder="Nazwa kropli" aria-label="Nazwa kropli"><button class="ghost" id="dropOk">Dodaj</button></div>
+      <p class="note" id="dropFull" hidden>Masz już 3 krople. Usuń jedną, żeby dodać inną.</p>
+    </div>
+
+    <h2>Objawy</h2>
+    <div class="card">
+      <ul class="plist" id="symList"></ul>
+      <div class="addrow"><input id="symIn" maxlength="40" placeholder="Nowy objaw" aria-label="Nowy objaw"><button class="ghost" id="symOk">Dodaj</button></div>
+      <p class="note">„Bez objawów” jest zawsze dostępne. Usunięcie objawu lub kropli nie zmienia zapisanej historii – przestają być tylko proponowane przy nowych karmieniach.</p>
+    </div>
+
+    <h2>Pytanie pomocnicze</h2>
+    <div class="card">
+      <p class="note" style="margin-top:0" id="recState">Sprawdzanie…</p>
+      <div class="seg" id="sQ" style="margin-top:10px">
+        <button type="button" data-q="child_birthdate" aria-pressed="true">Data urodzenia dziecka</button>
+        <button type="button" data-q="pet_name" aria-pressed="false">Imię zwierzaka</button>
+      </div>
+      <div class="addrow"><input id="sAns" type="date" aria-label="Odpowiedź na pytanie pomocnicze"><button class="ghost" id="sAnsSave">Zapisz</button></div>
+    </div>
+
+    <h2>Eksport do Excela</h2>
+    <div class="card">
+      <p class="note" style="margin-top:0">Pobiera wszystkie karmienia jako plik CSV, który otworzysz w Excelu (separator średnik, polskie znaki).</p>
+      <button class="ghost" id="csvBtn" style="margin-top:10px">Pobierz CSV</button>
+    </div>
+
+    <h2>Konto</h2>
+    <div class="card">
+      <p class="note" style="margin-top:0" id="accEmail"></p>
+      <p class="note">Drugi rodzic loguje się tym samym e-mailem i hasłem – oboje widzicie te same dane.</p>
+      <button class="ghost" id="logoutBtn" style="margin-top:10px">Wyloguj</button>
+    </div>
+  </section>
+
+  <div class="sync" id="sync"></div>
+</div>
+
+<nav class="tabs" role="tablist"><div>
+  <button role="tab" data-v="feed" aria-selected="true">Karmienie</button>
+  <button role="tab" data-v="day" aria-selected="false">Dzień</button>
+  <button role="tab" data-v="stats" aria-selected="false">Analiza</button>
+  <button role="tab" data-v="set" aria-selected="false">Ustawienia</button>
+</div></nav>
+</div>
+
+<dialog id="dlg"><form method="dialog" class="dlg">
+  <h3>Objawy po karmieniu</h3>
+  <div class="sub num" id="dlgSub"></div>
+  <div class="sym" id="symBtns"></div>
+  <div class="addrow" id="addRow" hidden><input id="addIn" maxlength="40" placeholder="Nazwa nowego objawu" aria-label="Nazwa nowego objawu"><button type="button" class="ghost" id="addOk">Dodaj</button></div>
+  <div id="sevWrap">
+    <span class="lbl">Nasilenie</span>
+    <div class="seg" id="sevSeg">
+      <button type="button" data-s="1">Lekkie</button>
+      <button type="button" data-s="2">Średnie</button>
+      <button type="button" data-s="3">Silne</button>
+    </div>
+  </div>
+  <label class="lbl" for="noteIn">Notatka</label>
+  <textarea id="noteIn" placeholder="np. płakała ok. 40 min po karmieniu, podkurczała nóżki"></textarea>
+  <div class="dlg-actions">
+    <button type="button" class="danger" id="delBtn">Usuń</button>
+    <button type="button" class="ghost" id="cancelBtn">Anuluj</button>
+    <button type="button" class="primary" id="symSave">Zapisz</button>
+  </div>
+</form></dialog>
+
+<div class="toast" id="toast"><span id="toastTxt"></span><button id="toastBtn">Dodaj objawy</button></div>
+
+<script>
+/* =========================================================
+   KONFIGURACJA – wklej dane ze swojego projektu Supabase
+   (Project Settings → API Keys / Data API)
+   ========================================================= */
+const SUPABASE_URL = 'https://zdhlszetmsnmxylvjxml.supabase.co/rest/v1/';   // np. https://abcdefgh.supabase.co
+const SUPABASE_KEY = 'sb_publishable_sLuTWJ3nLGdDKNEgR2keaQ_nehcOSi5';         // klucz publishable (sb_publishable_…) albo anon
+
+/* ---------- stałe i stan ---------- */
+const CALM = 'Bez objawów', STEP = 10, NSTEP = 5, NMAX = 90;
+const DEFAULT_PROFILE = {
+  child_name: '', max_ml: 150, drops: ['Sab Simplex', 'Delicol', 'Dicoflor'],
+  symptoms: ['Kolka / płacz','Ulewanie','Wymioty','Gazy / wzdęcia','Czkawka','Niespokojny sen','Prężenie się','Zaparcie','Luźna kupka','Wysypka'],
+};
+let profile = { ...DEFAULT_PROFILE };
+let MAX = profile.max_ml;
+const cur = { formula: 0, breast: 0 };
+const nurse = { min: 0, side: '' };
+let feedings = [], user = null, sb = null, channel = null, pollT = null;
+let queue = [], flushing = false, syncErr = false, lastSync = 0;
+let selDrops = new Set();
+let dayOffset = 0, statRange = 30, statDim = 'mix';
+const $ = s => document.querySelector(s);
+
+/* ---------- pomocnicze ---------- */
+const pad = n => String(n).padStart(2, '0');
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const hm = ts => { const d = new Date(ts); return pad(d.getHours()) + ':' + pad(d.getMinutes()); };
+function dur(ms) {
+  const m = Math.max(0, Math.round(ms / 60000)), h = Math.floor(m / 60), r = m % 60;
+  return h ? `${h} h ${pad(r)} min` : `${r} min`;
+}
+const startOfDay = off => { const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() + off); return d.getTime(); };
+function toLocalInput(ts) { const d = new Date(ts); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`; }
+function setStack(el, b, f) {
+  const t = b + f;
+  el.querySelector('.s-b').style.width = t ? (b / t * 100) + '%' : '0';
+  el.querySelector('.s-f').style.width = t ? (f / t * 100) + '%' : '0';
+}
+function legendHTML(b, f, totLabel = 'suma') {
+  return `<span><i class="dot" style="background:var(--breast)"></i>${b} ml odciągane</span>
+          <span><i class="dot" style="background:var(--formula)"></i>${f} ml modyfikowane</span>
+          <span class="tot">${totLabel} ${b + f} ml</span>`;
+}
+const isNurse = f => f.kind === 'nurse';
+const hasAssessment = f => Array.isArray(f.symptoms) && f.symptoms.length > 0;
+const isSymptomatic = f => hasAssessment(f) && f.symptoms.some(s => s !== CALM);
+const nurseDesc = f => 'pierś' + (f.minutes ? `, ${f.minutes} min` : '') + (f.side ? `, ${f.side}` : '');
+const newId = () => (crypto.randomUUID ? crypto.randomUUID() :
+  'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => { const r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 3 | 8)).toString(16); }));
+const sameText = (a, b) => a.trim().toLowerCase() === b.trim().toLowerCase();
+
+function lsGet(key, d) { try { return JSON.parse(localStorage.getItem(key)) ?? d; } catch (e) { return d; } }
+function lsSet(key, v) { try { localStorage.setItem(key, JSON.stringify(v)); } catch (e) {} }
+const k = name => `karmienie.${name}.${user ? user.id : 'anon'}`;
+function sortFeedings() { feedings.sort((a, b) => b.ts - a.ts); }
+
+/* ---------- mapowanie aplikacja <-> baza ---------- */
+const toRow = (f, uid) => ({
+  id: f.id, user_id: uid, ts: new Date(f.ts).toISOString(), kind: f.kind,
+  breast_ml: f.breast || 0, formula_ml: f.formula || 0, nurse_min: f.minutes || 0, side: f.side || '',
+  drops: f.drops || [], symptoms: f.symptoms || [], severity: f.severity || 0, note: f.note || '',
+});
+const fromRow = r => ({
+  id: r.id, ts: Date.parse(r.ts), kind: r.kind, breast: r.breast_ml || 0, formula: r.formula_ml || 0,
+  minutes: r.nurse_min || 0, side: r.side || '', drops: r.drops || [], symptoms: r.symptoms || [],
+  severity: r.severity || 0, note: r.note || '',
+});
+const pickProfile = p => ({
+  child_name: p.child_name ?? '', max_ml: p.max_ml || 150,
+  drops: Array.isArray(p.drops) ? p.drops : [], symptoms: Array.isArray(p.symptoms) ? p.symptoms : [],
+});
+
+/* ---------- kolejka zapisów (działa też bez zasięgu) ---------- */
+function applyOp(list, op) {
+  if (op.op === 'put') { const i = list.findIndex(x => x.id === op.f.id); if (i >= 0) list[i] = op.f; else list.push(op.f); }
+  if (op.op === 'del') return list.filter(x => x.id !== op.id);
+  return list;
+}
+function enqueue(op) {
+  if (!user) return;
+  if (op.op === 'prof') {
+    profile = { ...profile, ...op.data }; lsSet(k('profile'), profile); applyProfile();
+    const last = queue[queue.length - 1];
+    if (last && last.op === 'prof' && !(flushing && queue.length === 1)) { Object.assign(last.data, op.data); lsSet(k('queue'), queue); return; }
+  } else {
+    feedings = applyOp([...feedings], op); sortFeedings(); lsSet(k('cache'), feedings); renderAll();
+  }
+  queue.push(op); lsSet(k('queue'), queue);
+  flush();
+}
+async function putFeeding(f) { enqueue({ op: 'put', f }); }
+async function removeFeeding(id) { enqueue({ op: 'del', id }); }
+function setProfile(data) { enqueue({ op: 'prof', data }); }
+
+async function flush() {
+  if (flushing || !user || !sb) return;
+  flushing = true; setSync();
+  const uid = user.id;
+  try {
+    while (queue.length && user && user.id === uid) {
+      const op = queue[0];
+      let r;
+      if (op.op === 'put') r = await sb.from('feedings').upsert(toRow(op.f, uid));
+      else if (op.op === 'del') r = await sb.from('feedings').delete().eq('id', op.id);
+      else if (op.op === 'prof') r = await sb.from('profiles').upsert({ user_id: uid, ...op.data });
+      if (r && r.error) {
+        // błędy danych (np. naruszenie ograniczeń) – nie blokuj kolejki w nieskończoność
+        if (/^2[23]/.test(r.error.code || '')) { toast('Odrzucono nieprawidłowy zapis: ' + r.error.message); }
+        else throw r.error;
+      }
+      queue.shift(); lsSet(k('queue'), queue);
+    }
+    syncErr = false; lastSync = Date.now();
+  } catch (e) { console.error(e); syncErr = true; }
+  flushing = false; setSync();
+}
+
+async function fetchAll() {
+  const out = [];
+  for (let from = 0; ; from += 1000) {
+    const { data, error } = await sb.from('feedings').select('*').order('ts', { ascending: false }).range(from, from + 999);
+    if (error) throw error;
+    out.push(...data);
+    if (data.length < 1000) break;
+  }
+  return out.map(fromRow);
+}
+async function pull() {
+  if (!user || flushing) return;
+  if (queue.length) { await flush(); if (queue.length) return; }
+  const uid = user.id;
+  try {
+    let list = await fetchAll();
+    if (!user || user.id !== uid) return;
+    queue.forEach(op => { list = applyOp(list, op); });
+    feedings = list; sortFeedings(); lsSet(k('cache'), feedings);
+    syncErr = false; lastSync = Date.now();
+    renderAll();
+  } catch (e) { console.error(e); syncErr = true; }
+  setSync();
+}
+async function loadProfile() {
+  const uid = user.id;
+  try {
+    let { data, error } = await sb.from('profiles').select('child_name,max_ml,drops,symptoms').eq('user_id', uid).maybeSingle();
+    if (error) throw error;
+    if (!data) {
+      const r = await sb.from('profiles').upsert({ user_id: uid, child_name: user.user_metadata?.child_name || '' })
+        .select('child_name,max_ml,drops,symptoms').single();
+      if (r.error) throw r.error;
+      data = r.data;
+    }
+    if (!user || user.id !== uid) return;
+    if (!queue.some(o => o.op === 'prof')) { profile = { ...DEFAULT_PROFILE, ...pickProfile(data) }; lsSet(k('profile'), profile); applyProfile(); }
+  } catch (e) { console.error(e); syncErr = true; setSync(); }
+}
+function subscribe() {
+  if (channel) sb.removeChannel(channel);
+  const uid = user.id;
+  const onRow = p => {
+    const r = p.new; if (!r || !r.id) return;
+    if (queue.some(o => (o.op === 'put' && o.f.id === r.id) || (o.op === 'del' && o.id === r.id))) return;
+    feedings = applyOp([...feedings], { op: 'put', f: fromRow(r) }); sortFeedings(); lsSet(k('cache'), feedings); renderAll();
+  };
+  channel = sb.channel('karmienie-' + uid)
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'feedings', filter: 'user_id=eq.' + uid }, onRow)
+    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'feedings', filter: 'user_id=eq.' + uid }, onRow)
+    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles', filter: 'user_id=eq.' + uid }, p => {
+      if (queue.some(o => o.op === 'prof') || !p.new) return;
+      profile = { ...DEFAULT_PROFILE, ...pickProfile(p.new) }; lsSet(k('profile'), profile); applyProfile();
+    })
+    .subscribe();
+}
+function setSync() {
+  const el = $('#sync'); if (!el) return;
+  if (!user) { el.textContent = ''; return; }
+  if (flushing) { el.textContent = 'Zapisywanie…'; return; }
+  if (syncErr) { el.textContent = `Brak połączenia z bazą${queue.length ? ` – ${queue.length} zmian czeka na wysłanie` : ''}. Spróbuję ponownie.`; return; }
+  el.textContent = lastSync ? `Zsynchronizowano o ${hm(lastSync)}.` : 'Łączenie z bazą…';
+}
+
+/* ---------- start / stop sesji ---------- */
+async function startApp() {
+  hideAuth();
+  queue = lsGet(k('queue'), []);
+  feedings = lsGet(k('cache'), []); sortFeedings();
+  profile = { ...DEFAULT_PROFILE, ...lsGet(k('profile'), {}) };
+  selDrops = new Set(lsGet(k('drops'), []));
+  $('#accEmail').textContent = 'Zalogowano jako ' + user.email;
+  applyProfile(); renderAll(); setSync();
+  show(currentView());
+  await loadProfile();
+  const pend = lsGet('karmienie.pendingRecovery', null);
+  if (pend && user && pend.email === (user.email || '').toLowerCase()) {
+    const { error } = await sb.rpc('set_recovery', { p_question: pend.q, p_answer: pend.a });
+    if (!error) { try { localStorage.removeItem('karmienie.pendingRecovery'); } catch (x) {} }
+  }
+  refreshRecoveryState();
+  await pull();
+  if (user) subscribe();
+  clearInterval(pollT); pollT = setInterval(pull, 60000);
+}
+function stopApp() {
+  clearInterval(pollT);
+  if (channel && sb) { sb.removeChannel(channel); channel = null; }
+  feedings = []; queue = []; profile = { ...DEFAULT_PROFILE };
+}
+document.addEventListener('visibilitychange', () => { if (!document.hidden) pull(); });
+window.addEventListener('online', () => flush());
+
+/* ---------- pytanie pomocnicze ---------- */
+const Q_LABEL = { child_birthdate: 'data urodzenia dziecka', pet_name: 'imię zwierzaka' };
+function normAnswer(q, v) {
+  v = String(v || '').trim();
+  if (q === 'child_birthdate') return v;                           // RRRR-MM-DD z pola daty
+  return v.toLowerCase().replace(/ł/g, 'l').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ');
+}
+function bindQuestion(segSel, inputSel, onChange) {
+  const st = { q: 'child_birthdate' };
+  const paint = () => {
+    document.querySelectorAll(segSel + ' button').forEach(b => b.setAttribute('aria-pressed', b.dataset.q === st.q));
+    const inp = $(inputSel);
+    inp.type = st.q === 'child_birthdate' ? 'date' : 'text';
+    inp.placeholder = st.q === 'pet_name' ? 'np. Burek' : '';
+    inp.value = '';
+    onChange && onChange(st.q);
+  };
+  document.querySelectorAll(segSel + ' button').forEach(b => b.addEventListener('click', () => { st.q = b.dataset.q; paint(); }));
+  paint();
+  return st;
+}
+const authQ = bindQuestion('#aQ', '#aAns', q => {
+  $('#ansLbl').textContent = q === 'child_birthdate' ? 'Data urodzenia dziecka' : 'Imię zwierzaka';
+});
+const setQ = bindQuestion('#sQ', '#sAns');
+async function refreshRecoveryState() {
+  if (!user) return;
+  const { data, error } = await sb.rpc('my_recovery_question');
+  if (error) { $('#recState').textContent = 'Nie udało się sprawdzić pytania pomocniczego.'; return; }
+  $('#recState').textContent = data
+    ? `Ustawione: ${Q_LABEL[data]}. Możesz je zmienić poniżej.`
+    : '⚠️ Nie masz ustawionego pytania pomocniczego – bez niego nie odzyskasz hasła.';
+}
+async function saveRecovery(q, raw) {
+  const a = normAnswer(q, raw);
+  if (a.length < 2) throw new Error('Podaj odpowiedź.');
+  const { error } = await sb.rpc('set_recovery', { p_question: q, p_answer: a });
+  if (error) throw error;
+}
+$('#sAnsSave').addEventListener('click', async () => {
+  try { await saveRecovery(setQ.q, $('#sAns').value); $('#sAns').value = ''; toast('Zapisano pytanie pomocnicze.'); refreshRecoveryState(); }
+  catch (e) { toast(e.message === 'Podaj odpowiedź.' ? e.message : 'Nie udało się zapisać (brak internetu?).'); }
+});
+
+/* ---------- ekran logowania ---------- */
+let authMode = 'login';
+const appUrl = location.origin + location.pathname;
+function authMsg(t, cls = '') { const m = $('#aMsg'); m.textContent = t; m.className = 'amsg ' + cls; }
+function showAuth(mode) {
+  authMode = mode;
+  $('#auth').hidden = false; $('#app').hidden = true;
+  const login = mode === 'login', signup = mode === 'signup', forgot = mode === 'forgot', rec = mode === 'recovery';
+  $('#authSeg').style.display = (login || signup) ? '' : 'none';
+  document.querySelectorAll('#authSeg button').forEach(b => b.setAttribute('aria-pressed', b.dataset.m === mode));
+  $('#fEmail').hidden = rec;
+  $('#fChild').hidden = !signup;
+  $('#fQ').hidden = !(signup || forgot);
+  $('#fAns').hidden = !(signup || forgot);
+  $('#fPass').hidden = false;
+  $('#aHint').hidden = !(signup || forgot);
+  $('#aHint').textContent = signup
+    ? 'Pytanie pomocnicze pozwoli ustawić nowe hasło, gdy zapomnisz obecnego.'
+    : 'Podaj e-mail konta, wybierz pytanie ustawione przy rejestracji i odpowiedź. Po 5 błędnych próbach reset blokuje się na 24 godziny.';
+  $('#passLbl').textContent = (rec || forgot) ? 'Nowe hasło (min. 6 znaków)' : signup ? 'Hasło (min. 6 znaków)' : 'Hasło';
+  $('#aPass').autocomplete = login ? 'current-password' : 'new-password';
+  $('#aSubmit').textContent = login ? 'Zaloguj' : signup ? 'Załóż konto' : forgot ? 'Ustaw nowe hasło' : 'Ustaw nowe hasło';
+  $('#aForgot').hidden = !login;
+  $('#aBack').hidden = !(forgot || rec);
+  if (!$('#aEmail').value) $('#aEmail').value = lsGet('karmienie.lastEmail', '');
+}
+function hideAuth() { $('#auth').hidden = true; $('#app').hidden = false; authMsg(''); $('#aPass').value = ''; }
+document.querySelectorAll('#authSeg button').forEach(b => b.addEventListener('click', () => { authMsg(''); showAuth(b.dataset.m); }));
+$('#aForgot').addEventListener('click', () => { authMsg(''); showAuth('forgot'); });
+$('#aBack').addEventListener('click', () => { authMsg(''); recovering = false; if (user) hideAuth(); else showAuth('login'); });
+
+function plError(e) {
+  const m = (e && e.message) || '';
+  if (/invalid login credentials/i.test(m)) return 'Nieprawidłowy e-mail lub hasło.';
+  if (/email not confirmed/i.test(m)) return 'Najpierw potwierdź adres e-mail (link w wiadomości).';
+  if (/already registered|already been registered/i.test(m)) return 'Konto z tym adresem już istnieje – zaloguj się.';
+  if (/password should be at least|weak password/i.test(m)) return 'Hasło jest za krótkie lub za słabe.';
+  if (/rate limit|too many/i.test(m)) return 'Za dużo prób. Odczekaj chwilę i spróbuj ponownie.';
+  if (/invalid email|unable to validate email/i.test(m)) return 'Nieprawidłowy adres e-mail.';
+  if (/failed to fetch|network/i.test(m)) return 'Brak połączenia z internetem.';
+  return 'Błąd: ' + m;
+}
+$('#authForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  if (!sb) return;
+  const email = $('#aEmail').value.trim(), password = $('#aPass').value, child = $('#aChild').value.trim();
+  if (authMode !== 'recovery' && !/^\S+@\S+\.\S+$/.test(email)) { authMsg('Podaj poprawny adres e-mail.', 'err'); return; }
+  if (password.length < 6) { authMsg('Hasło musi mieć co najmniej 6 znaków.', 'err'); return; }
+  if (authMode === 'signup' && !child) { authMsg('Podaj imię dziecka.', 'err'); return; }
+  const answer = normAnswer(authQ.q, $('#aAns').value);
+  if ((authMode === 'signup' || authMode === 'forgot') && answer.length < 2) {
+    authMsg(authQ.q === 'child_birthdate' ? 'Podaj datę urodzenia dziecka.' : 'Podaj imię zwierzaka.', 'err'); return;
+  }
+  const btn = $('#aSubmit'); btn.disabled = true; authMsg('Chwileczkę…');
+  try {
+    if (authMode === 'login') {
+      const { error } = await sb.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+      lsSet('karmienie.lastEmail', email);
+    } else if (authMode === 'signup') {
+      lsSet('karmienie.pendingRecovery', { email: email.toLowerCase(), q: authQ.q, a: answer });
+      const { data, error } = await sb.auth.signUp({ email, password, options: { data: { child_name: child } } });
+      if (error) { try { localStorage.removeItem('karmienie.pendingRecovery'); } catch (x) {} throw error; }
+      lsSet('karmienie.lastEmail', email);
+      if (!data.session) { showAuth('login'); authMsg('Konto utworzone, ale baza wymaga potwierdzenia e-mail. Wyłącz „Confirm email” w Supabase (instrukcja).', 'err'); }
+    } else if (authMode === 'forgot') {
+      const { data, error } = await sb.rpc('reset_password_with_answer',
+        { p_email: email, p_question: authQ.q, p_answer: answer, p_new_password: password });
+      if (error) {
+        if (/locked/i.test(error.message)) throw new Error('Zbyt wiele błędnych prób. Reset jest zablokowany na 24 godziny.');
+        throw error;
+      }
+      if (!data) { authMsg('Nieprawidłowy e-mail, pytanie lub odpowiedź.', 'err'); btn.disabled = false; return; }
+      const r = await sb.auth.signInWithPassword({ email, password });
+      if (r.error) throw r.error;
+      lsSet('karmienie.lastEmail', email);
+      toast('Hasło zmienione – jesteś zalogowany.');
+    } else if (authMode === 'recovery') {
+      const { error } = await sb.auth.updateUser({ password });
+      if (error) throw error;
+      recovering = false;
+      hideAuth(); toast('Hasło zmienione.');
+    }
+  } catch (err) { authMsg(/^(Zbyt|Podaj)/.test(err.message || '') ? err.message : plError(err), 'err'); }
+  btn.disabled = false;
+});
+
+/* ---------- butelki ---------- */
+function buildTicks(el) {
+  const t = el.querySelector('.ticks'); let h = '';
+  for (let v = 10; v < MAX; v += 10) {
+    const p = (v / MAX) * 100, major = v % 50 === 0;
+    h += `<i class="${major ? 'major' : ''}" style="bottom:${p}%"></i>`;
+    if (major) h += `<em style="bottom:${p}%;transform:translateY(50%)">${v}</em>`;
+  }
+  t.innerHTML = h;
+  el.setAttribute('aria-valuemax', MAX);
+}
+function setVal(key, v) { cur[key] = Math.max(0, Math.min(MAX, Math.round(v / STEP) * STEP)); renderFeed(); }
+['formula', 'breast'].forEach(key => {
+  const el = $('#b-' + key);
+  const fromY = y => { const r = el.getBoundingClientRect(); setVal(key, (r.bottom - y) / r.height * MAX); };
+  el.addEventListener('pointerdown', e => { el.setPointerCapture(e.pointerId); fromY(e.clientY); });
+  el.addEventListener('pointermove', e => { if (el.hasPointerCapture(e.pointerId)) fromY(e.clientY); });
+  el.addEventListener('keydown', e => {
+    const d = { ArrowUp: STEP, ArrowRight: STEP, ArrowDown: -STEP, ArrowLeft: -STEP, PageUp: 50, PageDown: -50 }[e.key];
+    if (d) { e.preventDefault(); setVal(key, cur[key] + d); }
+  });
+});
+document.querySelectorAll('.bottles .steppers button').forEach(b =>
+  b.addEventListener('click', () => setVal(b.dataset.k, cur[b.dataset.k] + Number(b.dataset.d))));
+
+function renderFeed() {
+  ['formula', 'breast'].forEach(key => {
+    const el = $('#b-' + key);
+    el.querySelector('.fill').style.height = (cur[key] / MAX * 100) + '%';
+    el.setAttribute('aria-valuenow', cur[key]);
+    el.setAttribute('aria-valuetext', cur[key] + ' ml');
+    $('#val-' + key).innerHTML = cur[key] + '<small>ml</small>';
+  });
+  setStack($('#stackNow'), cur.breast, cur.formula);
+  $('#legendNow').innerHTML = legendHTML(cur.breast, cur.formula);
+  $('#saveBtn').disabled = cur.breast + cur.formula === 0;
+}
+function renderDrops() {
+  $('#dropsCard').style.display = profile.drops.length ? '' : 'none';
+  $('#dropsRow').innerHTML = profile.drops.map(d =>
+    `<label><input type="checkbox" value="${esc(d)}" ${selDrops.has(d) ? 'checked' : ''}>${esc(d)}</label>`).join('');
+}
+$('#dropsRow').addEventListener('change', e => {
+  const v = e.target.value; e.target.checked ? selDrops.add(v) : selDrops.delete(v);
+  lsSet(k('drops'), [...selDrops]);
+});
+$('#when').value = toLocalInput(Date.now());
+$('#nWhen').value = toLocalInput(Date.now());
+
+$('#saveBtn').addEventListener('click', () => {
+  const ts = new Date($('#when').value).getTime() || Date.now();
+  const f = { id: newId(), kind: 'bottle', ts, formula: cur.formula, breast: cur.breast,
+    drops: profile.drops.filter(d => selDrops.has(d)), symptoms: [], severity: 0, note: '' };
+  putFeeding(f);
+  cur.formula = 0; cur.breast = 0; renderFeed();
+  $('#when').value = toLocalInput(Date.now());
+  toast(`Zapisano ${f.formula + f.breast} ml o ${hm(f.ts)}`, () => openDlg(f.id));
+});
+
+/* ---------- karmienie piersią ---------- */
+function renderNurse() {
+  $('#nMin').textContent = nurse.min ? nurse.min + ' min' : '—';
+  document.querySelectorAll('#sideSeg button').forEach(b => b.setAttribute('aria-pressed', b.dataset.s === nurse.side));
+}
+$('#nMinus').addEventListener('click', () => { nurse.min = Math.max(0, nurse.min - NSTEP); renderNurse(); });
+$('#nPlus').addEventListener('click', () => { nurse.min = Math.min(NMAX, nurse.min + NSTEP); renderNurse(); });
+document.querySelectorAll('#sideSeg button').forEach(b => b.addEventListener('click', () => {
+  nurse.side = nurse.side === b.dataset.s ? '' : b.dataset.s; renderNurse();
+}));
+$('#nSave').addEventListener('click', () => {
+  const ts = new Date($('#nWhen').value).getTime() || Date.now();
+  const f = { id: newId(), kind: 'nurse', ts, formula: 0, breast: 0, minutes: nurse.min, side: nurse.side, drops: [], symptoms: [], severity: 0, note: '' };
+  putFeeding(f);
+  nurse.min = 0; nurse.side = ''; renderNurse();
+  $('#nWhen').value = toLocalInput(Date.now());
+  toast(`Zapisano karmienie piersią o ${hm(f.ts)}`, () => openDlg(f.id));
+});
+
+/* ---------- od ostatniego karmienia ---------- */
+function renderSince() {
+  const last = feedings.find(f => f.ts <= Date.now());
+  if (!last) { $('#sinceVal').textContent = '—'; $('#sinceLbl').textContent = 'brak zapisanych karmień'; return; }
+  $('#sinceVal').textContent = dur(Date.now() - last.ts);
+  $('#sinceLbl').textContent = `od ostatniego karmienia (${hm(last.ts)}, ${isNurse(last) ? nurseDesc(last) : (last.formula + last.breast) + ' ml'})`;
+}
+setInterval(renderSince, 30000);
+
+/* ---------- dzień ---------- */
+function renderDay() {
+  const s = startOfDay(dayOffset), e = startOfDay(dayOffset + 1);
+  const d = new Date(s);
+  const lbl = dayOffset === 0 ? 'Dziś' : dayOffset === -1 ? 'Wczoraj' : '';
+  $('#dayLabel').textContent = (lbl ? lbl + ', ' : '') + d.toLocaleDateString('pl-PL', { day: 'numeric', month: 'long', weekday: lbl ? undefined : 'long' });
+  $('#nextDay').disabled = dayOffset >= 0;
+
+  const list = feedings.filter(f => f.ts >= s && f.ts < e).sort((a, b) => a.ts - b.ts);
+  const B = list.reduce((a, f) => a + (f.breast || 0), 0), F = list.reduce((a, f) => a + (f.formula || 0), 0);
+  const nurses = list.filter(isNurse), nMin = nurses.reduce((a, f) => a + (f.minutes || 0), 0);
+  $('#tiles').innerHTML = `
+    <div class="tile b"><span>Odciągane</span><b>${B}<small>ml</small></b></div>
+    <div class="tile f"><span>Modyfikowane</span><b>${F}<small>ml</small></b></div>
+    <div class="tile n"><span>Pierś</span><b>${nurses.length}<small>×</small></b>${nMin ? `<em>${nMin} min</em>` : ''}</div>`;
+  setStack($('#stackDay'), B, F);
+  $('#legendDay').innerHTML = legendHTML(B, F, 'z butelki');
+
+  const prevOf = f => feedings.find(x => x.ts < f.ts);
+  const gaps = list.map(f => { const p = prevOf(f); return p ? f.ts - p.ts : null; }).filter(g => g != null);
+  const avg = gaps.length ? gaps.reduce((a, g) => a + g, 0) / gaps.length : null;
+  $('#kpis').innerHTML = `
+    <div class="kpi"><b>${list.length}</b><span>karmień</span></div>
+    <div class="kpi"><b>${avg ? dur(avg) : '—'}</b><span>średnia przerwa</span></div>
+    <div class="kpi"><b>${list.filter(isSymptomatic).length}</b><span>z objawami</span></div>`;
+
+  const ul = $('#feedList');
+  if (!list.length) { ul.innerHTML = `<li class="empty">Brak karmień tego dnia.</li>`; return; }
+  ul.innerHTML = list.map(f => {
+    const p = prevOf(f);
+    const gap = p ? `<li class="gap">${dur(f.ts - p.ts)} przerwy</li>` : '';
+    let chips;
+    if (!hasAssessment(f)) chips = `<span class="chip none">+ dodaj objawy</span>`;
+    else chips = f.symptoms.map(x => `<span class="chip ${x === CALM ? 'ok' : ''}">${esc(x)}</span>`).join('') +
+      (f.severity && isSymptomatic(f) ? `<span class="chip">${['', 'lekkie', 'średnie', 'silne'][f.severity]}</span>` : '');
+    const dropChips = (f.drops || []).map(x => `<span class="chip drop">💧 ${esc(x)}</span>`).join('');
+    if (isNurse(f)) {
+      return `${gap}<li><button class="entry n" data-id="${f.id}">
+        <div class="erow" style="margin-bottom:0"><span class="etime num">${hm(f.ts)}</span>
+        <span class="eml">Karmienie piersią</span><span class="etot num">${f.minutes ? f.minutes + ' min' : ''}${f.side ? (f.minutes ? ', ' : '') + f.side : ''}</span></div>
+        <div class="chips">${dropChips}${chips}</div></button></li>`;
+    }
+    const t = f.formula + f.breast;
+    return `${gap}<li><button class="entry" data-id="${f.id}">
+      <div class="erow"><span class="etime num">${hm(f.ts)}</span>
+      <span class="eml num">${f.breast} odc. / ${f.formula} mod.</span><span class="etot num">${t} ml</span></div>
+      <div class="stack thin"><div class="s-b" style="width:${t ? f.breast / t * 100 : 0}%"></div><div class="s-f" style="width:${t ? f.formula / t * 100 : 0}%"></div></div>
+      <div class="chips">${dropChips}${chips}</div></button></li>`;
+  }).join('');
+  ul.querySelectorAll('.entry').forEach(b => b.addEventListener('click', () => openDlg(b.dataset.id)));
+}
+$('#prevDay').addEventListener('click', () => { dayOffset--; renderDay(); });
+$('#nextDay').addEventListener('click', () => { if (dayOffset < 0) { dayOffset++; renderDay(); } });
+
+/* ---------- analiza ---------- */
+const ml = f => (f.formula || 0) + (f.breast || 0);
+const BUCKETS = [
+  ['Tylko odciągane', p => p === 0],
+  ['Przewaga odciąganego', p => p > 0 && p < 0.4],
+  ['Mniej więcej po równo', p => p >= 0.4 && p <= 0.6],
+  ['Przewaga modyfikowanego', p => p > 0.6 && p < 1],
+  ['Tylko modyfikowane', p => p === 1],
+];
+function sizeBuckets() {
+  const q = Math.round(MAX / 40) * 10 || 10;           // ~ćwiartki zakresu, co 10 ml
+  return [['Do ' + q + ' ml', 0, q], [(q + 10) + '–' + 2 * q + ' ml', q + 1, 2 * q], [(2 * q + 10) + '–' + 3 * q + ' ml', 2 * q + 1, 3 * q], [(3 * q + 10) + ' ml i więcej', 3 * q + 1, 1e9]];
+}
+function groupsFor(dim, rated) {
+  const bottles = rated.filter(f => !isNurse(f) && ml(f) > 0);
+  if (dim === 'mix') return [
+    ...BUCKETS.map(([name, test]) => ({ name, items: bottles.filter(f => test(f.formula / ml(f))) })),
+    { name: 'Karmienie piersią', items: rated.filter(isNurse), nurse: true },
+  ];
+  if (dim === 'size') return sizeBuckets().map(([name, a, b]) => ({ name, items: bottles.filter(f => ml(f) >= a && ml(f) <= b) }));
+  if (dim === 'drops') {
+    const names = [...new Set([...profile.drops, ...bottles.flatMap(f => f.drops || [])])];
+    return [
+      { name: 'Bez kropli', items: bottles.filter(f => !(f.drops || []).length) },
+      ...names.map(d => ({ name: 'Z ' + d, items: bottles.filter(f => (f.drops || []).includes(d)) })),
+    ];
+  }
+  return [['Noc (22–6)', h => h >= 22 || h < 6], ['Rano (6–12)', h => h >= 6 && h < 12], ['Popołudnie (12–18)', h => h >= 12 && h < 18], ['Wieczór (18–22)', h => h >= 18 && h < 22]]
+    .map(([name, fn]) => ({ name, items: rated.filter(f => fn(new Date(f.ts).getHours())) }));
+}
+function mixBar(g) {
+  if (g.nurse) return `<span class="mix"><i style="width:100%;background:var(--nurse)"></i></span>`;
+  const F = g.items.reduce((a, f) => a + (f.formula || 0), 0), B = g.items.reduce((a, f) => a + (f.breast || 0), 0);
+  const N = g.items.filter(isNurse).length, cnt = g.items.length || 1, T = F + B;
+  if (!T && !N) return `<span class="mix"><i style="width:100%;background:var(--line)"></i></span>`;
+  const share = 1 - N / cnt;
+  return `<span class="mix" title="Średnia proporcja w tej grupie">
+    <i style="width:${T ? B / T * share * 100 : 0}%;background:var(--breast)"></i>
+    <i style="width:${T ? F / T * share * 100 : 0}%;background:var(--formula)"></i>
+    <i style="width:${N / cnt * 100}%;background:var(--nurse)"></i></span>`;
+}
+function renderStats() {
+  const from = statRange ? Date.now() - statRange * 864e5 : 0;
+  const rated = feedings.filter(f => f.ts >= from && hasAssessment(f));
+  if (!rated.length) {
+    $('#buckets').innerHTML = `<div class="empty">Dodaj objawy (lub „Bez objawów”) do kilku karmień w zakładce Dzień – tutaj pojawi się porównanie.</div>`;
+    $('#symTable').innerHTML = `<div class="empty">Brak danych.</div>`;
+    return;
+  }
+  const groups = groupsFor(statDim, rated);
+  $('#buckets').innerHTML = groups.map(g => {
+    const n = g.items.length, s = g.items.filter(isSymptomatic);
+    const rate = n ? s.length / n : 0;
+    const sev = s.length ? (s.reduce((a, f) => a + (f.severity || 0), 0) / s.length) : 0;
+    return `<div class="bucket">
+      <div class="bhead">${mixBar(g)}<b>${esc(g.name)}</b><span class="cnt num">${n} karm.</span></div>
+      ${n ? `<div class="rate"><div class="track"><i style="width:${rate * 100}%"></i></div><b class="num">${Math.round(rate * 100)}%</b></div>
+      <div class="note" style="margin-top:6px">${s.length} z objawami${sev ? `, średnie nasilenie ${sev.toFixed(1)} / 3` : ''}</div>` : `<div class="note" style="margin-top:0">Brak ocenionych karmień.</div>`}
+    </div>`;
+  }).join('');
+  $('#symTable').innerHTML = groups.filter(g => g.items.length).map(g => {
+    const cnt = {};
+    g.items.forEach(f => f.symptoms.filter(x => x !== CALM).forEach(x => cnt[x] = (cnt[x] || 0) + 1));
+    const top = Object.entries(cnt).sort((a, b) => b[1] - a[1]).slice(0, 4);
+    return `<div class="bucket"><div class="bhead"><b>${esc(g.name)}</b></div><div class="chips" style="margin-top:0">${
+      top.length ? top.map(([x, c]) => `<span class="chip">${esc(x)}: ${Math.round(c / g.items.length * 100)}%</span>`).join('') : '<span class="chip ok">Bez objawów</span>'}</div></div>`;
+  }).join('') || `<div class="empty">Brak danych.</div>`;
+}
+function bindSeg(sel, key, fn) {
+  document.querySelectorAll(sel + ' button').forEach(b => b.addEventListener('click', () => {
+    fn(b.dataset[key]);
+    document.querySelectorAll(sel + ' button').forEach(x => x.setAttribute('aria-pressed', x === b));
+    renderStats();
+  }));
+}
+bindSeg('#dimSeg', 'd', v => { statDim = v; });
+bindSeg('#rangeSeg', 'r', v => { statRange = Number(v); });
+
+/* ---------- okno objawów ---------- */
+let editId = null, editSym = new Set(), editSev = 0, delArmed = false;
+function paintDlg() {
+  const all = [CALM, ...profile.symptoms];
+  editSym.forEach(x => { if (!all.includes(x)) all.push(x); });   // historyczne objawy zostają widoczne
+  $('#symBtns').innerHTML = all.map(x =>
+    `<button type="button" class="${x === CALM ? 'calm' : ''}" data-s="${esc(x)}" aria-pressed="${editSym.has(x)}">${esc(x)}</button>`).join('') +
+    `<button type="button" class="add" data-add="1" aria-label="Dodaj nowy objaw">+</button>`;
+  $('#sevWrap').style.display = [...editSym].some(x => x !== CALM) ? '' : 'none';
+  document.querySelectorAll('#sevSeg button').forEach(b => b.setAttribute('aria-pressed', Number(b.dataset.s) === editSev));
+}
+$('#symBtns').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  if (b.dataset.add) { $('#addRow').hidden = false; $('#addIn').value = ''; $('#addIn').focus(); return; }
+  const x = b.dataset.s;
+  if (x === CALM) { editSym = editSym.has(CALM) ? new Set() : new Set([CALM]); editSev = 0; }
+  else { editSym.delete(CALM); editSym.has(x) ? editSym.delete(x) : editSym.add(x); if (!editSev) editSev = 1; }
+  paintDlg();
+});
+function addSymptomName(name) {
+  name = name.trim().replace(/;/g, ',').slice(0, 40);
+  if (!name) return null;
+  const exists = [CALM, ...profile.symptoms].find(x => sameText(x, name));
+  if (!exists) setProfile({ symptoms: [...profile.symptoms, name] });
+  return exists || name;
+}
+function addFromDialog() {
+  const name = addSymptomName($('#addIn').value);
+  if (!name) return;
+  if (name !== CALM) { editSym.delete(CALM); editSym.add(name); if (!editSev) editSev = 1; }
+  $('#addRow').hidden = true; paintDlg();
+}
+$('#addOk').addEventListener('click', addFromDialog);
+$('#addIn').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); addFromDialog(); } });
+document.querySelectorAll('#sevSeg button').forEach(b => b.addEventListener('click', () => { editSev = Number(b.dataset.s); paintDlg(); }));
+function resetDel() { delArmed = false; $('#delBtn').textContent = 'Usuń'; $('#delBtn').classList.remove('confirm'); }
+function openDlg(id) {
+  const f = feedings.find(x => x.id === id); if (!f) return;
+  editId = id; editSym = new Set(f.symptoms || []); editSev = f.severity || 0;
+  $('#dlgSub').textContent = isNurse(f)
+    ? `${hm(f.ts)} – karmienie piersią${f.minutes ? ', ' + f.minutes + ' min' : ''}${f.side ? ', ' + f.side : ''}`
+    : `${hm(f.ts)} – ${f.breast} ml odciągane / ${f.formula} ml modyfikowane / suma ${f.formula + f.breast} ml` + ((f.drops || []).length ? `. Krople: ${f.drops.join(', ')}` : '');
+  $('#noteIn').value = f.note || '';
+  resetDel(); $('#addRow').hidden = true; paintDlg(); $('#dlg').showModal();
+}
+$('#cancelBtn').addEventListener('click', () => $('#dlg').close());
+$('#symSave').addEventListener('click', () => {
+  const f = feedings.find(x => x.id === editId); if (!f) return;
+  const symp = [...editSym].some(x => x !== CALM);
+  putFeeding({ ...f, symptoms: [...editSym], severity: symp ? (editSev || 1) : 0, note: $('#noteIn').value.trim() });
+  $('#dlg').close();
+});
+$('#delBtn').addEventListener('click', () => {
+  if (!delArmed) { delArmed = true; $('#delBtn').textContent = 'Na pewno usunąć?'; $('#delBtn').classList.add('confirm'); return; }
+  const id = editId; resetDel(); $('#dlg').close();
+  removeFeeding(id); toast('Usunięto karmienie.');
+});
+
+/* ---------- ustawienia ---------- */
+function applyProfile() {
+  MAX = profile.max_ml || 150;
+  cur.formula = Math.min(cur.formula, MAX); cur.breast = Math.min(cur.breast, MAX);
+  buildTicks($('#b-formula')); buildTicks($('#b-breast'));
+  $('#kidName').textContent = profile.child_name || 'Twoje dziecko';
+  document.title = profile.child_name ? `Karmienie – ${profile.child_name}` : 'Dziennik karmienia';
+  renderFeed(); renderDrops(); renderSettings();
+  if ($('#dlg').open) paintDlg();
+  if (!$('#v-stats').hidden) renderStats();
+}
+function renderSettings() {
+  if (document.activeElement !== $('#sChild')) $('#sChild').value = profile.child_name;
+  $('#mxVal').textContent = profile.max_ml + ' ml';
+  $('#dropList').innerHTML = profile.drops.map((d, i) =>
+    `<li><span>💧 ${esc(d)}</span><button data-i="${i}" aria-label="Usuń ${esc(d)}">✕</button></li>`).join('') || '<li class="muted">Brak kropli na liście.</li>';
+  const full = profile.drops.length >= 3;
+  $('#dropAdd').hidden = full; $('#dropFull').hidden = !full;
+  $('#symList').innerHTML = profile.symptoms.map((x, i) =>
+    `<li><span>${esc(x)}</span><button data-i="${i}" aria-label="Usuń ${esc(x)}">✕</button></li>`).join('') || '<li class="muted">Brak objawów na liście.</li>';
+}
+$('#sChildSave').addEventListener('click', () => {
+  const v = $('#sChild').value.trim().slice(0, 40);
+  setProfile({ child_name: v }); $('#sChild').blur(); toast('Zapisano imię.');
+});
+$('#mxMinus').addEventListener('click', () => setProfile({ max_ml: Math.max(50, profile.max_ml - 10) }));
+$('#mxPlus').addEventListener('click', () => setProfile({ max_ml: Math.min(400, profile.max_ml + 10) }));
+function addDrop() {
+  const v = $('#dropIn').value.trim().slice(0, 30);
+  if (!v) return;
+  if (profile.drops.some(d => sameText(d, v))) { toast('Te krople już są na liście.'); return; }
+  if (profile.drops.length >= 3) return;
+  setProfile({ drops: [...profile.drops, v] }); $('#dropIn').value = '';
+}
+$('#dropOk').addEventListener('click', addDrop);
+$('#dropIn').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); addDrop(); } });
+$('#dropList').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  const name = profile.drops[Number(b.dataset.i)];
+  selDrops.delete(name); lsSet(k('drops'), [...selDrops]);
+  setProfile({ drops: profile.drops.filter((_, i) => i !== Number(b.dataset.i)) });
+});
+function addSym() {
+  const v = $('#symIn').value;
+  if (!v.trim()) return;
+  if ([CALM, ...profile.symptoms].some(x => sameText(x, v))) { toast('Ten objaw już jest na liście.'); return; }
+  addSymptomName(v); $('#symIn').value = '';
+}
+$('#symOk').addEventListener('click', addSym);
+$('#symIn').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); addSym(); } });
+$('#symList').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  setProfile({ symptoms: profile.symptoms.filter((_, i) => i !== Number(b.dataset.i)) });
+});
+$('#logoutBtn').addEventListener('click', async () => {
+  if (queue.length && !confirmLogout()) return;
+  try { localStorage.removeItem(k('cache')); localStorage.removeItem(k('queue')); } catch (e) {}
+  await sb.auth.signOut();
+});
+let logoutArmed = false;
+function confirmLogout() {
+  if (logoutArmed) { logoutArmed = false; return true; }
+  logoutArmed = true; $('#logoutBtn').textContent = 'Niewysłane zmiany przepadną – wyloguj mimo to';
+  setTimeout(() => { logoutArmed = false; $('#logoutBtn').textContent = 'Wyloguj'; }, 5000);
+  return false;
+}
+
+/* ---------- eksport CSV ---------- */
+$('#csvBtn').addEventListener('click', () => {
+  const list = [...feedings].sort((a, b) => a.ts - b.ts);
+  if (!list.length) { toast('Brak danych do eksportu.'); return; }
+  const dropNames = [...new Set([...profile.drops, ...list.flatMap(f => f.drops || [])])];
+  const head = ['data', 'godzina', 'rodzaj', 'odciągane_ml', 'modyfikowane_ml', 'suma_ml', 'proc_modyfikowanego',
+    'pierś_min', 'pierś_strona', 'krople', ...dropNames, 'objawy', 'liczba_objawów', 'nasilenie', 'notatka'];
+  const rows = list.map(f => {
+    const d = new Date(f.ts), t = ml(f), syms = f.symptoms || [];
+    return [
+      `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`, hm(f.ts),
+      isNurse(f) ? 'pierś' : 'butelka', f.breast || 0, f.formula || 0, t,
+      t ? Math.round(f.formula / t * 100) : '', f.minutes || '', f.side || '',
+      (f.drops || []).join(', '), ...dropNames.map(x => (f.drops || []).includes(x) ? 1 : 0),
+      syms.join('; '), syms.length ? syms.filter(x => x !== CALM).length : '', f.severity || 0,
+      (/^[=+\-@]/.test(f.note || '') ? "'" : '') + (f.note || ''),
+    ];
+  });
+  const q = v => { const s = String(v ?? ''); return /[;"\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+  const csv = '\ufeff' + [head, ...rows].map(r => r.map(q).join(';')).join('\r\n');
+  const name = (profile.child_name || 'dziecko').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/gi, '-').toLowerCase();
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+  a.download = `karmienie-${name}-${toLocalInput(Date.now()).slice(0, 10)}.csv`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+});
+
+/* ---------- toast ---------- */
+let toastT;
+function toast(txt, action) {
+  $('#toastTxt').textContent = txt;
+  const btn = $('#toastBtn');
+  btn.style.display = action ? '' : 'none';
+  btn.onclick = () => { $('#toast').classList.remove('show'); action && action(); };
+  $('#toast').classList.add('show');
+  clearTimeout(toastT); toastT = setTimeout(() => $('#toast').classList.remove('show'), 6000);
+}
+
+/* ---------- zakładki ---------- */
+const VIEWS = ['feed', 'day', 'stats', 'set'];
+const currentView = () => { const h = location.hash.slice(1); return VIEWS.includes(h) ? h : 'feed'; };
+function show(v) {
+  document.querySelectorAll('.tabs button').forEach(b => b.setAttribute('aria-selected', b.dataset.v === v));
+  VIEWS.forEach(x => { $('#v-' + x).hidden = x !== v; });
+  if (v === 'day') { dayOffset = 0; renderDay(); }
+  if (v === 'stats') renderStats();
+  if (location.hash.slice(1) !== v) history.replaceState(null, '', location.pathname + location.search + '#' + v);
+  window.scrollTo(0, 0);
+}
+document.querySelectorAll('.tabs button').forEach(b => b.addEventListener('click', () => show(b.dataset.v)));
+window.addEventListener('hashchange', () => { if (VIEWS.includes(location.hash.slice(1))) show(location.hash.slice(1)); });
+
+function renderAll() { renderSince(); renderDay(); renderStats(); }
+
+/* ---------- uruchomienie ---------- */
+let recovering = false;
+renderFeed(); renderNurse();
+try { navigator.storage && navigator.storage.persist && navigator.storage.persist(); } catch (e) {}
+
+if (!window.supabase || SUPABASE_URL.includes('WKLEJ') || SUPABASE_KEY.includes('WKLEJ')) {
+  showAuth('login');
+  authMsg(!window.supabase ? 'Nie udało się wczytać biblioteki Supabase – sprawdź internet.' :
+    'Aplikacja nie jest skonfigurowana: uzupełnij SUPABASE_URL i SUPABASE_KEY na początku skryptu w index.html.', 'err');
+  $('#aSubmit').disabled = true;
+} else {
+  sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+    auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },
+  });
+  sb.auth.onAuthStateChange((event, session) => {
+    // bez await wewnątrz – zalecenie biblioteki, stąd setTimeout
+    setTimeout(() => {
+      if (event === 'PASSWORD_RECOVERY') recovering = true;
+      const u = session ? session.user : null;
+      if (u && (!user || user.id !== u.id)) { user = u; startApp(); }
+      else if (u) { user = u; }
+      else if (!u) { if (user) stopApp(); user = null; recovering = false; showAuth(authMode === 'signup' ? 'signup' : 'login'); }
+      if (recovering && user) showAuth('recovery');
+    }, 0);
+  });
+}
+
+</script>
+</body>
+</html>

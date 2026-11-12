@@ -1,0 +1,47 @@
+# Co 3 dni "puka" do bazy Supabase, żeby darmowy projekt nie został uśpiony.
+# Raz na ~50 dni robi też pusty commit, bo GitHub wyłącza zaplanowane akcje
+# w repozytoriach bez aktywności przez 60 dni.
+name: Supabase keep-alive
+
+on:
+  schedule:
+    - cron: "17 6 */3 * *"   # co 3 dni, 06:17 UTC
+  workflow_dispatch:          # przycisk "Run workflow" do ręcznego testu
+
+permissions:
+  contents: write
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Supabase
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+        run: |
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_KEY" ]; then
+            echo "Brak sekretów SUPABASE_URL / SUPABASE_KEY w ustawieniach repozytorium." && exit 1
+          fi
+          code=$(curl -s -o response.txt -w "%{http_code}" -X POST \
+            "$SUPABASE_URL/rest/v1/rpc/ping" \
+            -H "apikey: $SUPABASE_KEY" \
+            -H "Content-Type: application/json" \
+            -d '{}')
+          echo "HTTP $code"; cat response.txt; echo
+          [ "$code" -ge 200 ] && [ "$code" -lt 300 ]
+
+      - uses: actions/checkout@v4
+
+      - name: Keep repository active
+        run: |
+          last=$(git log -1 --format=%ct)
+          now=$(date +%s)
+          if [ $(( now - last )) -gt 4320000 ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
+            git commit --allow-empty -m "keep-alive"
+            git push
+          else
+            echo "Repozytorium aktywne – commit niepotrzebny."
+          fi
